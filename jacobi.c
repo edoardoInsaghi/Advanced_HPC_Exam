@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
     for (int step=0; step<STEPS && !quit; ++step) {
 
         MPI_Win_fence(0, win);
-        MPI_Get(&u[IDX(0,1)], NX, MPI_DOUBLE, up, IDX(local_rows-1,1), NX, MPI_DOUBLE, win);
-        MPI_Get(&u[IDX(local_rows+1,1)], NX, MPI_DOUBLE, down, IDX(1,1), NX, MPI_DOUBLE, win);
+        MPI_Get(&u[IDX(0,0)], NX+2, MPI_DOUBLE, up, IDX(local_rows-1,0), NX+2, MPI_DOUBLE, win);
+        MPI_Get(&u[IDX(local_rows+1,0)], NX+2, MPI_DOUBLE, down, IDX(1,0), NX+2, MPI_DOUBLE, win);
         MPI_Win_fence(0, win);
 
         #pragma omp parallel for collapse(2)
