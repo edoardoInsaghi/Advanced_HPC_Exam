@@ -1,0 +1,19 @@
+```{r}
+library(ggplot2)
+library(dplyr)
+df = read.csv("timings_cpu.csv")
+```
+
+
+```{r}
+rank0_1000 = df %>% filter(rank == 0, NX == 1000)
+rank0_10000 = df %>% filter(rank == 0, NX == 10000)
+
+ggplot(data=rank0_1000, aes(x=omp_threads, y=comp_time, color=comp_time)) + geom_point() + geom_line() + 
+  facet_wrap(~size, scales="free_y") + theme_bw()
+
+ggplot(data=rank0_10000, aes(x=omp_threads, y=comp_time, color=comp_time)) + geom_point() + geom_line() + 
+  facet_wrap(~size, scales="free_y") + theme_bw()
+```
+
+

@@ -7,7 +7,6 @@
 
 
 #define STEPS 2000
-
 #define IDX(i,j) ((i)*(NX+2)+(j))  // 2D indexing macro with ghost cells
 
 int main(int argc, char** argv) {
@@ -47,16 +46,15 @@ int main(int argc, char** argv) {
     int extra = NY % size;
     int local_rows = base_rows + (rank < extra ? 1 : 0);
     int start_row = rank * base_rows + (rank < extra ? rank : extra);
-
     int total_rows = local_rows + 2;
     int row_size = NX + 2;
 
     double* u = calloc(total_rows * row_size, sizeof(double));
     double* u_new = calloc(total_rows * row_size, sizeof(double));
-
     double temp = 100.0;
     memset(u, 0, total_rows * row_size * sizeof(double));
     memset(u_new, 0, total_rows * row_size * sizeof(double));
+
     if (rank == 0) {
         for (int j = 0; j < row_size; j++) {
             u[IDX(0, j)] = temp;
@@ -78,9 +76,7 @@ int main(int argc, char** argv) {
     setup_end = MPI_Wtime();
     setup_time = setup_end - setup_start;
 
-    int quit = 0;
-    for (int step=0; step<STEPS && !quit; ++step) {
-
+    for (int step=0; step<STEPS; ++step) {
 
         comm_start = MPI_Wtime();
         MPI_Win_fence(0, win);
@@ -96,7 +92,8 @@ int main(int argc, char** argv) {
             for (int j=1; j<=NX; ++j) {
                 u_new[IDX(i,j)] = 0.25 * (
                     u[IDX(i+1,j)] + u[IDX(i-1,j)] +
-                    u[IDX(i,j+1)] + u[IDX(i,j-1)]);
+                    u[IDX(i,j+1)] + u[IDX(i,j-1)]
+                );
             }
         }
         comp_end = MPI_Wtime();

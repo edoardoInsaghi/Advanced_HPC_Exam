@@ -30,3 +30,16 @@ target_link_libraries(
     ${MPI_C_LIBRARIES}
     OpenMP::OpenMP_C
 )
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp -foffload=nvptx-none")
+add_executable(test_gpu test_gpu.c)
+target_include_directories(
+    test_gpu
+    PRIVATE
+    ${MPI_C_INCLUDE_PATH}
+)
+target_link_libraries(
+    test_gpu
+    ${MPI_C_LIBRARIES}
+    OpenMP::OpenMP_C
+)
