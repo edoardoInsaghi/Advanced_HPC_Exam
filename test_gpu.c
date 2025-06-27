@@ -16,7 +16,10 @@ int main(int argc, char** argv) {
     int threads_per_team = atoi(argv[3]); // Threads per team
     int NY = NX;
 
-    double setup_start = MPI_Wtime();
+    double setup_start, setup_end, comm_start, comm_end, comp_start, comp_end;
+    double setup_time, comm_time, comp_time;
+    setup_start = MPI_Wtime();
+
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -59,9 +62,8 @@ int main(int argc, char** argv) {
     int up = (rank == 0) ? MPI_PROC_NULL : rank - 1;
     int down = (rank == size - 1) ? MPI_PROC_NULL : rank + 1;
     
-    double setup_end = MPI_Wtime();
-    double setup_time = setup_end - setup_start;
-    double comm_time = 0.0, comp_time = 0.0;
+    setup_end = MPI_Wtime();
+    setup_time = setup_end - setup_start;
 
     for (int step=0; step<STEPS; step++) {
         
@@ -69,8 +71,8 @@ int main(int argc, char** argv) {
         //#pragma omp target update from(u_old[IDX(1,0):row_size])          // First interior row
         //#pragma omp target update from(u_old[IDX(local_rows,0):row_size]) // Last interior row
         MPI_Win_fence(0, win);
-        MPI_Get(&u_old[IDX(0,0)], row_size, MPI_DOUBLE, up, IDX(local_rows,0), row_size, MPI_DOUBLE, win);
-        MPI_Get(&u_old[IDX(local_rows+1,0)], row_size, MPI_DOUBLE, down, IDX(1,0), row_size, MPI_DOUBLE, win);
+        MPI_Get(&u[IDX(0,0)], row_size, MPI_DOUBLE, up, IDX(local_rows,0), row_size, MPI_DOUBLE, win);
+        MPI_Get(&u[IDX(local_rows+1,0)], row_size, MPI_DOUBLE, down, IDX(1,0), row_size, MPI_DOUBLE, win);
         MPI_Win_fence(0, win);
         //#pragma omp target update to(u_old[IDX(0,0):row_size])            // Top ghost
         //#pragma omp target update to(u_old[IDX(local_rows+1,0):row_size]) // Bottom ghost
@@ -79,13 +81,13 @@ int main(int argc, char** argv) {
 
         // GPU Kernel
         comp_start = MPI_Wtime();
-        #pragma omp target teams num_teams(teams) thread_limit(threads_per_team) is_device_ptr(u_old, u_next)
+        #pragma omp target teams num_teams(teams) thread_limit(threads_per_team)
         #pragma omp distribute parallel for collapse(2)
         for (int i = 1; i <= local_rows; i++) {
             for (int j = 1; j <= NX; j++) {
-                u_next[IDX(i,j)] = 0.25 * (
-                    u_old[IDX(i+1,j)] + u_old[IDX(i-1,j)] +
-                    u_old[IDX(i,j+1)] + u_old[IDX(i,j-1)]
+                u_new[IDX(i,j)] = 0.25 * (
+                    u[IDX(i+1,j)] + u[IDX(i-1,j)] +
+                    u[IDX(i,j+1)] + u[IDX(i,j-1)]
                 );
             }
         }
@@ -93,8 +95,8 @@ int main(int argc, char** argv) {
         comp_time += comp_end - comp_start;
 
         double* tmp = u;
-        u = u_next;
-        u_next = tmp;
+        u = u_new;
+        u_new = tmp;
     }
 
     // Output timings
